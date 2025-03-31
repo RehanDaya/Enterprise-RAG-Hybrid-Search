@@ -27,6 +27,10 @@ def initialize_system():
         store = VectorStore()
         try:
             db = store.load_existing()
+            # Check if database is empty
+            if db and db._collection and db._collection.count() == 0:
+                st.warning("The knowledge base is empty. Please upload documents to get started.")
+                db = None
         except FileNotFoundError:
             st.warning("No existing vector database found. Please upload documents to get started.")
             db = None
@@ -34,10 +38,10 @@ def initialize_system():
         # Create processor
         processor = DocumentProcessor()
         
-        # Create retriever and agent only if we have a database
+        # Create retriever and agent only if we have a database with documents
         retriever = None
         agent = None
-        if db is not None:
+        if db is not None and db._collection and db._collection.count() > 0:
             retriever = EnhancedRetriever(db)
             agent = KnowledgeAgent(retriever)
         

@@ -96,9 +96,43 @@ class VectorStore:
         if self.db is None:
             return self.create_from_documents(documents)
         else:
+            # Log the documents being added
+            self.logger.info(f"Adding {len(documents)} documents to database")
+            
+            # Verify document metadata before adding
+            for doc in documents:
+                # Ensure required metadata fields
+                if 'source' not in doc.metadata:
+                    self.logger.warning(f"Document missing source metadata: {doc.page_content[:100]}...")
+                    doc.metadata['source'] = 'Unknown'
+                if 'original_filename' not in doc.metadata:
+                    doc.metadata['original_filename'] = doc.metadata['source']
+                
+                # Log document details
+                self.logger.info(f"Adding document:")
+                self.logger.info(f"  Source: {doc.metadata['source']}")
+                self.logger.info(f"  Original filename: {doc.metadata['original_filename']}")
+                self.logger.info(f"  Content preview: {doc.page_content[:200]}...")
+                self.logger.info(f"  Full metadata: {doc.metadata}")
+            
+            # Add documents to the database
             self.db.add_documents(documents)
+            
+            # Verify documents were added
+            all_docs = self.db.get()
+            if all_docs and 'documents' in all_docs:
+                self.logger.info(f"Successfully added documents. Total documents in DB: {len(all_docs['documents'])}")
+                
+                # Log all documents in the database
+                for i, (doc, meta) in enumerate(zip(all_docs['documents'], all_docs['metadatas'])):
+                    self.logger.info(f"Document {i+1} in DB:")
+                    self.logger.info(f"  Source: {meta.get('source', 'Unknown')}")
+                    self.logger.info(f"  Original filename: {meta.get('original_filename', 'Unknown')}")
+                    self.logger.info(f"  Content preview: {doc[:200]}...")
+                    self.logger.info(f"  Full metadata: {meta}")
+            
             return self.db
-    
+            
     def delete_document(self, document_name):
         """Remove all chunks associated with a specific document"""
         if self.db is None:
@@ -145,15 +179,53 @@ class VectorStore:
         if self.db is None:
             return None
         try:
-            return self.db.get()
-        except:
+            all_docs = self.db.get()
+            if all_docs and 'documents' in all_docs:
+                self.logger.info(f"Retrieved {len(all_docs['documents'])} documents from database")
+                self.logger.info(f"Sample document content: {all_docs['documents'][0][:200]}...")
+            return all_docs
+        except Exception as e:
+            self.logger.error(f"Error getting documents: {str(e)}")
             return None
             
     def similarity_search(self, query, k=5, filter=None):
         """Wrapper for similarity search"""
         if self.db is None:
             return []
-        return self.db.similarity_search(query, k=k, filter=filter)
+        try:
+            # Log the search parameters
+            self.logger.info(f"Performing similarity search with query: {query}")
+            self.logger.info(f"Search parameters - k: {k}, filter: {filter}")
+            
+            # Get all documents first to verify database state
+            all_docs = self.db.get()
+            if all_docs and 'documents' in all_docs:
+                self.logger.info(f"Total documents in DB: {len(all_docs['documents'])}")
+                self.logger.info(f"Document sources: {[meta.get('source', 'Unknown') for meta in all_docs.get('metadatas', [])]}")
+                
+                # Log detailed information about each document
+                for i, (doc, meta) in enumerate(zip(all_docs['documents'], all_docs['metadatas'])):
+                    self.logger.info(f"Document {i+1}:")
+                    self.logger.info(f"  Source: {meta.get('source', 'Unknown')}")
+                    self.logger.info(f"  Original filename: {meta.get('original_filename', 'Unknown')}")
+                    self.logger.info(f"  Content preview: {doc[:200]}...")
+            
+            # Perform the search
+            results = self.db.similarity_search(query, k=k, filter=filter)
+            
+            # Log the results
+            self.logger.info(f"Found {len(results)} similar documents")
+            for i, doc in enumerate(results):
+                self.logger.info(f"Result {i+1}:")
+                self.logger.info(f"  Source: {doc.metadata.get('source', 'Unknown')}")
+                self.logger.info(f"  Original filename: {doc.metadata.get('original_filename', 'Unknown')}")
+                self.logger.info(f"  Content preview: {doc.page_content[:200]}...")
+                self.logger.info(f"  Full metadata: {doc.metadata}")
+            
+            return results
+        except Exception as e:
+            self.logger.error(f"Error in similarity search: {str(e)}")
+            return []
         
     def max_marginal_relevance_search(self, query, k=3, filter=None):
         """Wrapper for MMR search"""
