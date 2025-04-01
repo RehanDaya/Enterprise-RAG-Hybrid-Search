@@ -17,6 +17,8 @@ The system employs a modular pipeline architecture with these key components:
    - BM25 sparse retrieval for keyword matching
    - Maximum Marginal Relevance (MMR) for diversity
    - Cross-encoder reranking to prioritize the most relevant results
+   - Entity-aware retrieval for proper nouns and rare terms
+   - Direct text matching for single-occurrence entities
 
 4. **Query Enhancement**: Employs LLM-based query expansion to generate alternative phrasings and improve retrieval recall.
 
@@ -25,6 +27,7 @@ The system employs a modular pipeline architecture with these key components:
 ## Technical Differentiators
 
 - **Multi-strategy Retrieval**: The hybrid approach helps overcome the limitations of purely semantic or keyword-based systems.
+- **Entity-Aware Processing**: Specialized handling of proper nouns and rare terms ensures accurate retrieval of specific entities.
 - **Local Execution**: Complete privacy with all processing done on-premises.
 - **Streamlit Interface**: User-friendly web UI for document uploads and conversational interaction.
 - **Citation Support**: Generated responses include source citations for traceability.
@@ -70,12 +73,23 @@ The retrieval layer represents the system's most sophisticated component, implem
    - Dense retrieval captures semantic similarity
    - Sparse retrieval (BM25) excels at keyword matching and rare terms
    - MMR introduces diversity to prevent information redundancy
+   - Entity-aware retrieval handles proper nouns and single-occurrence terms
 
 2. **Cross-Encoder Reranking**: The system employs a two-stage retrieval process where an initial broad retrieval is followed by precise reranking. The cross-encoder evaluates query-document pairs directly rather than comparing separate embeddings, dramatically improving precision. This computationally expensive step is only applied to the initially retrieved set, balancing effectiveness with efficiency.
 
-3. **Dynamic Retrieval Parameters**: The system adjusts retrieval parameters based on query characteristics, employing different strategies for different query types.
+3. **Dynamic Retrieval Parameters**: The system adjusts retrieval parameters based on query characteristics, employing different strategies for different query types:
+   - Increased search breadth for entity queries
+   - Specialized handling of proper nouns with case-insensitive matching
+   - Direct text matching for rare terms and single-occurrence entities
+   - Adaptive boosting of documents containing exact entity matches
 
-This multilayered approach produces more comprehensive and relevant results than any single method could achieve.
+4. **Entity-Aware Processing**: The system includes specialized handling for proper nouns and rare terms:
+   - Direct text matching bypasses embedding-based search for exact name matches
+   - Multiple case variations are checked to ensure robust matching
+   - Documents containing exact entity matches are prioritized in results
+   - Fallback strategies ensure rare terms are found even in single-occurrence contexts
+
+This multilayered approach produces more comprehensive and relevant results than any single method could achieve, with particular attention to the challenges of retrieving specific entities and rare terms.
 
 ## Query Enhancement
 
